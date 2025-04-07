@@ -1,0 +1,236 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Registration</title>
+  <link rel="stylesheet" href="{% static 'blogs/register.css' %}">
+  <!-- Use FontAwesome CDN instead of the kit to ensure icons load properly -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    .input-box {
+      position: relative;
+      margin-bottom: 15px;
+    }
+
+    .input-box input {
+      width: 100%;
+      padding: 10px;
+      padding-right: 40px; /* Make room for the eye icon */
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    .eye-icon {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      z-index: 10;
+      /* Adjust the position to account for the details span */
+      margin-top: 10px;
+    }
+
+    .gender-btn {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      background-color: #ddd;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    .gender-btn:hover {
+      background-color: #ccc;
+    }
+
+    .gender-btn.selected {
+      background-color: #007bff;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="title">Registration</div>
+    <div class="content">
+      <form id="registrationForm">
+        {% csrf_token %}
+        <div class="user-details">
+          <div class="input-box">
+            <span class="details">Full Name</span>
+            <input type="text" id="fullName" placeholder="Enter your full name" required>
+          </div>
+          <div class="input-box">
+            <span class="details">Username</span>
+            <input type="text" id="username" placeholder="Enter your username" required>
+          </div>
+          <div class="input-box">
+            <span class="details">Email</span>
+            <input type="email" id="email" placeholder="Enter your email" required>
+          </div>
+          <div class="input-box">
+            <span class="details">Phone Number</span>
+            <input type="tel" id="mobileNumber" placeholder="Enter your number" required>
+          </div>
+          <div class="input-box">
+            <span class="details">Password</span>
+            <input type="password" id="password" placeholder="Enter your password" required>
+            <i class="fas fa-eye eye-icon" id="togglePassword"></i>
+          </div>
+          <div class="input-box">
+            <span class="details">Confirm Password</span>
+            <input type="password" id="password2" placeholder="Confirm your password" required>
+            <i class="fas fa-eye eye-icon" id="togglePassword2"></i>
+          </div>
+        </div>
+        <div class="gender-details">
+          <span class="gender-title">Gender</span>
+          <div class="category">
+            <button type="button" class="gender-btn" data-value="Male">Male</button>
+            <button type="button" class="gender-btn" data-value="Female">Female</button>
+            <button type="button" class="gender-btn" data-value="Prefer not to say">Prefer not to say</button>
+          </div>
+          <input type="hidden" id="gender" name="gender">
+        </div>
+
+        <!-- Error Message Container -->
+        <div id="errorContainer" style="color: red; margin-bottom: 10px;"></div>
+
+        <div class="button">
+          <input type="submit" value="Register">
+        </div>
+      </form>
+    </div>
+  </div>
+  
+<script> 
+  document.addEventListener("DOMContentLoaded", function () {
+  // Add event listeners for the password toggle buttons
+  document.getElementById("togglePassword").addEventListener("click", function () {
+    togglePassword("password", this);
+  });
+
+  document.getElementById("togglePassword2").addEventListener("click", function () {
+    togglePassword("password2", this);
+  });
+
+  function togglePassword(fieldId, icon) {
+    let field = document.getElementById(fieldId);
+    if (field.type === "password") {
+      field.type = "text";
+      icon.classList.replace("fa-eye", "fa-eye-slash");
+    } else {
+      field.type = "password";
+      icon.classList.replace("fa-eye-slash", "fa-eye");
+    }
+  }
+
+  // Improved mobile number validation
+  document.getElementById("mobileNumber").addEventListener("input", function() {
+    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+  });
+
+  document.getElementById("registrationForm").addEventListener("submit", async function (event) {
+    event.preventDefault(); // Prevent default form submission
+
+    // Clear previous errors
+    document.getElementById("errorContainer").innerText = "";
+
+    let fullName = document.getElementById("fullName").value.trim();
+    let username = document.getElementById("username").value.trim();
+    let email = document.getElementById("email").value.trim();
+    let mobileNumber = document.getElementById("mobileNumber").value.trim();
+    let password = document.getElementById("password").value;
+    let password2 = document.getElementById("password2").value;
+    let gender = document.getElementById("gender").value.trim();
+
+    // Validate required fields
+    if (!fullName || !username || !email || !mobileNumber || !password || !password2 || !gender) {
+      document.getElementById("errorContainer").innerText = "All fields are required!";
+      return;
+    }
+
+    // Validate mobile number format
+    if (!/^\d{10}$/.test(mobileNumber)) {
+      document.getElementById("errorContainer").innerText = "Mobile number must be exactly 10 digits";
+      return;
+    }
+
+    // Validate password match
+    if (password !== password2) {
+      document.getElementById("errorContainer").innerText = "Passwords do not match!";
+      return;
+    }
+
+    let formData = {
+      full_name: fullName,
+      username: username,
+      email: email,
+      mobile_number: mobileNumber,
+      password: password,
+      gender: gender
+    };
+
+    try {
+      let csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+
+      let response = await fetch("/api/register/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken
+        },
+        body: JSON.stringify(formData)
+      });
+
+      let result = await response.json();
+
+      if (response.ok) {
+        alert("User registered successfully!");
+        window.location.href = "{% url 'login.html' %}"; // Redirect to login page
+      } else {
+        // Improved error handling
+        if (typeof result === 'object' && result !== null) {
+          // Handle DRF validation errors which come as an object with field names as keys
+          let errorMessage = "";
+          for (const [field, errors] of Object.entries(result)) {
+            if (Array.isArray(errors)) {
+              errorMessage += `${field}: ${errors.join(', ')}\n`;
+            } else if (typeof errors === 'string') {
+              errorMessage += `${field}: ${errors}\n`;
+            }
+          }
+          document.getElementById("errorContainer").innerText = errorMessage || "Registration failed!";
+        } else {
+          document.getElementById("errorContainer").innerText = result.error || "Registration failed!";
+        }
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      document.getElementById("errorContainer").innerText = "Something went wrong! Please try again.";
+    }
+  });
+
+  // Handle gender button selection
+  document.querySelectorAll(".gender-btn").forEach(button => {
+    button.addEventListener("click", function () {
+      document.getElementById("gender").value = this.getAttribute("data-value");
+
+      // Highlight the selected button
+      document.querySelectorAll(".gender-btn").forEach(btn => btn.classList.remove("selected"));
+      this.classList.add("selected");
+    });
+  });
+});
+
+</script>
+</body>
+
+</html>
