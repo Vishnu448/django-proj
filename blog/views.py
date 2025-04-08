@@ -91,6 +91,8 @@ def register_user(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+ # Make sure to import your User model
+
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -98,7 +100,7 @@ def login_view(request):
         
         try:
             # First, get the user by username
-            user = User.objects.get(username=username)  # Note: username not User_name
+            user = User.objects.get(username=username)
             
             # Check if the password matches using Django's check_password function
             if check_password(password, user.password):
